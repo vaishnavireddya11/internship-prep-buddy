@@ -1,4 +1,4 @@
-import streamlit as st
+""import streamlit as st
 import random
 from hr_interview import get_hr_feedback
 from prompts import HR_QUESTIONS
@@ -18,15 +18,17 @@ if "show_feedback" not in st.session_state:
     st.session_state.show_feedback = False
 if "feedback" not in st.session_state:
     st.session_state.feedback = ""
-if "user_input_value" not in st.session_state:
-    st.session_state.user_input_value = ""
+if "user_input" not in st.session_state:
+    st.session_state.user_input = ""
+if "reset_flag" not in st.session_state:
+    st.session_state.reset_flag = False
 
-# Display current question
+# Display HR question
 question = HR_QUESTIONS[st.session_state.question_index]
 st.markdown(f"**🗣️ HR Question:** {question}")
 
-# Text input
-user_input = st.text_area("💬 Your Answer:", key="answer_input", height=200)
+# Input box
+user_input = st.text_area("💬 Your Answer:", value=st.session_state.user_input, key="user_input_textarea", height=200)
 
 # Buttons
 col1, col2 = st.columns(2)
@@ -36,6 +38,7 @@ with col1:
         if user_input.strip():
             st.session_state.feedback = get_hr_feedback(user_input.strip())
             st.session_state.show_feedback = True
+            st.session_state.user_input = user_input.strip()
         else:
             st.warning("Please enter your answer before submitting.")
 
@@ -44,7 +47,7 @@ with col2:
         st.session_state.question_index = random.randint(0, len(HR_QUESTIONS) - 1)
         st.session_state.feedback = ""
         st.session_state.show_feedback = False
-        st.session_state.answer_input = ""  # Clear previous answer
+        st.session_state.user_input = ""
         st.rerun()
 
 if st.session_state.show_feedback:
