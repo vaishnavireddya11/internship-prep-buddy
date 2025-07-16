@@ -2,6 +2,8 @@ import streamlit as st
 import random
 from hr_interview import get_hr_feedback
 from prompts import HR_QUESTIONS
+import pdf_qa
+
 
 st.set_page_config(page_title="Internship Prep Buddy")
 
@@ -54,3 +56,30 @@ if st.session_state.show_feedback:
 
 # Reset flag so future text edits are allowed
 st.session_state.reset_input = False
+
+st.title("🤖 Internship Prep Buddy")
+
+# HR Interview Bot Section
+st.header("🧑‍💼 HR Interview Bot")
+# ... your existing HR code here ...
+
+st.markdown("---")
+
+# PDF Q&A Section
+st.header("📄 Ask Questions from a PDF")
+pdf_file = st.file_uploader("Upload your PDF file", type="pdf")
+
+if pdf_file:
+    with st.spinner("Reading PDF..."):
+        pdf_text = pdf_qa.extract_text_from_pdf(pdf_file)
+        st.success("PDF uploaded successfully!")
+
+    question = st.text_input("Ask a question about the PDF:")
+    if st.button("Get Answer"):
+        if question:
+            with st.spinner("Generating answer..."):
+                answer = pdf_qa.ask_about_pdf(pdf_text, question)
+                st.markdown(f"**Answer:** {answer}")
+        else:
+            st.warning("Please enter a question.")
+
