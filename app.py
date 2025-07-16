@@ -4,10 +4,12 @@ from hr_interview import get_hr_feedback
 from prompts import HR_QUESTIONS
 import pdf_qa
 
+st.set_page_config(page_title="QueryCrack", page_icon="🧠")
 
-st.set_page_config(page_title="Internship Prep Buddy")
+st.title("🧠 QueryCrack")
 
-st.title("🧑‍💼 Internship Prep Buddy – HR Interview")
+# --- HR Interview Bot Section ---
+st.header("🧑‍💼 HR Interview Practice")
 
 # Initialize session state
 if "question_index" not in st.session_state:
@@ -57,15 +59,9 @@ if st.session_state.show_feedback:
 # Reset flag so future text edits are allowed
 st.session_state.reset_input = False
 
-st.title("🤖 Internship Prep Buddy")
-
-# HR Interview Bot Section
-st.header("🧑‍💼 HR Interview Bot")
-# ... your existing HR code here ...
-
 st.markdown("---")
 
-# PDF Q&A Section
+# --- PDF Q&A Section ---
 st.header("📄 Ask Questions from a PDF")
 pdf_file = st.file_uploader("Upload your PDF file", type="pdf")
 
@@ -82,4 +78,3 @@ if pdf_file:
                 st.markdown(f"**Answer:** {answer}")
         else:
             st.warning("Please enter a question.")
-
