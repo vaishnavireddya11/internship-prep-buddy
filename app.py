@@ -18,27 +18,30 @@ if "show_feedback" not in st.session_state:
     st.session_state.show_feedback = False
 if "feedback" not in st.session_state:
     st.session_state.feedback = ""
-if "reset_input" not in st.session_state:
-    st.session_state.reset_input = False
+if "user_input" not in st.session_state:
+    st.session_state.user_input = ""
 
-# Select current question
+# Display current question
 question = HR_QUESTIONS[st.session_state.question_index]
 st.markdown(f"**🗣️ HR Question:** {question}")
 
-# If reset_input is True, clear the text box
+# Text area for answer
 user_input = st.text_area(
     "💬 Your Answer:",
-    value="" if st.session_state.reset_input else None,
-    key="user_input",
+    value=st.session_state.user_input,
+    key="user_input_textarea",
     height=200
 )
+
+# Sync text input with session state
+st.session_state.user_input = user_input
 
 # Buttons
 col1, col2 = st.columns([1, 1])
 
 with col1:
     if st.button("📝 Get Feedback"):
-        if user_input.strip():
+        if user_input and user_input.strip():
             st.session_state.feedback = get_hr_feedback(user_input)
             st.session_state.show_feedback = True
         else:
@@ -47,17 +50,15 @@ with col1:
 with col2:
     if st.button("➡️ Next Question"):
         st.session_state.question_index = random.randint(0, len(HR_QUESTIONS) - 1)
-        st.session_state.reset_input = True
+        st.session_state.user_input = ""
+        st.session_state.feedback = ""
         st.session_state.show_feedback = False
         st.rerun()
 
-# Show feedback only if requested
+# Show feedback
 if st.session_state.show_feedback:
     st.markdown("### ✅ AI Feedback")
     st.write(st.session_state.feedback)
-
-# Reset flag so future text edits are allowed
-st.session_state.reset_input = False
 
 st.markdown("---")
 
