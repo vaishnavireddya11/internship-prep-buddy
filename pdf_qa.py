@@ -1,5 +1,5 @@
 import PyPDF2
-from groq import Groq  # use openai if you're using OpenAI instead
+from groq import Groq  
 import streamlit as st
 
 client = Groq(api_key=st.secrets["GROQ_API_KEY"])
