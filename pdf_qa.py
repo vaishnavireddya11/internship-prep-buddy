@@ -23,8 +23,11 @@ Question:
 Answer:"""
 
     response = client.chat.completions.create(
-        model="llama3-8b-8192",
-        messages=[{"role": "user", "content": prompt}],
+        model="llama-3.1-8b-instant",   # ✅ Correct model name
+        messages=[
+            {"role": "system", "content": "You are a helpful assistant that answers questions based on a PDF."},
+            {"role": "user", "content": prompt}
+        ],
         temperature=0.7,
     )
     return response.choices[0].message.content
