@@ -5,7 +5,7 @@ st.set_page_config(page_title="QueryCrack - PDF Q&A", layout="wide")
 
 st.title("📄 QueryCrack - PDF Q&A (Groq)")
 st.write("Upload a PDF and ask questions based on its content.")
-streamlit run app.py
+
 
 # File uploader
 uploaded_file = st.file_uploader("Upload a PDF", type=["pdf"])
