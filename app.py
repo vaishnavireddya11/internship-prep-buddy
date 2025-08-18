@@ -20,18 +20,18 @@ def extract_pdf_text(pdf_file):
 # Function to query LLM
 def ask_llm(query, context):
     try:
-       response = client.chat.completions.create(
-    model="llama-3.3-70b-versatile",  # Updated to supported model
-    messages=[
-        {"role": "system", "content": "You are a helpful assistant."},
-        {"role": "user", "content": f"Context:\n{context}\n\nQuestion:\n{question}"}
-    ],
-    temperature=0.2
-)
-
-        return response.choices[0].message["content"]
+        response = client.chat.completions.create(
+            model="llama-3.3-70b-versatile",  # Updated to supported model
+            messages=[
+                {"role": "system", "content": "You are a helpful assistant."},
+                {"role": "user", "content": f"Context:\n{context}\n\nQuestion:\n{query}"}
+            ],
+            temperature=0.2
+        )
+        return response.choices[0].message.content
     except Exception as e:
         return f"❌ Error: {str(e)}"
+
 
 # ------------------ Streamlit UI ------------------
 st.set_page_config(page_title="PDF Q&A with Groq", layout="wide")
