@@ -40,14 +40,16 @@ def retrieve(query, chunks, index, k=3):
 
 # Function: Ask OpenAI with context
 def ask_llm(query, context):
-    prompt = f"Answer the question based on the context:\n\nContext: {context}\n\nQuestion: {query}\n\nAnswer:"
     response = client.chat.completions.create(
         model="llama-3.1-70b-versatile",
-        messages=[{"role": "user", "content": prompt}],
-        max_tokens=300,
+        messages=[
+            {"role": "system", "content": "You are a helpful assistant for answering questions from a document."},
+            {"role": "user", "content": f"Context:\n{context}\n\nQuestion:\n{query}"}
+        ],
         temperature=0.2
     )
-    return response["choices"][0]["message"]["content"]
+    return response.choices[0].message.content
+
 
 # Streamlit App
 st.set_page_config(page_title="PDF Q&A with Embeddings", layout="wide")
