@@ -4,11 +4,11 @@ from PyPDF2 import PdfReader
 from sentence_transformers import SentenceTransformer
 import faiss
 import numpy as np
-import openai
+from groq import Groq
 
 # Load secrets
-openai.api_key = st.secrets["OPENAI_API_KEY"]
-
+groq.api_key = st.secrets["GROQ_API_KEY"]
+client = Groq(api_key=os.getenv("GROQ_API_KEY"))
 # Load embedding model
 embedder = SentenceTransformer("all-MiniLM-L6-v2")
 
@@ -42,8 +42,8 @@ def retrieve(query, chunks, index, k=3):
 # Function: Ask OpenAI with context
 def ask_llm(query, context):
     prompt = f"Answer the question based on the context:\n\nContext: {context}\n\nQuestion: {query}\n\nAnswer:"
-    response = openai.ChatCompletion.create(
-        model="gpt-3.5-turbo",
+    response = client.chat.completions.create(
+        model="llama-3.1-70b-versatile",
         messages=[{"role": "user", "content": prompt}],
         max_tokens=300,
         temperature=0.2
