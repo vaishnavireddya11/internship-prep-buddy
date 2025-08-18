@@ -8,6 +8,7 @@ from groq import Groq
 
 # Load secrets
 client = Groq(api_key=os.getenv("GROQ_API_KEY"))
+
 # Load embedding model
 embedder = SentenceTransformer("all-MiniLM-L6-v2")
 
@@ -16,7 +17,9 @@ def read_pdf(file):
     pdf = PdfReader(file)
     text = ""
     for page in pdf.pages:
-        text += page.extract_text() or ""
+        extracted = page.extract_text()
+        if extracted:
+            text += extracted
     return text
 
 # Function: Chunk text
@@ -27,18 +30,20 @@ def chunk_text(text, chunk_size=500):
 # Function: Build FAISS index
 def build_faiss(chunks):
     embeddings = embedder.encode(chunks)
+    embeddings = np.array(embeddings).astype("float32")
     dimension = embeddings.shape[1]
     index = faiss.IndexFlatL2(dimension)
-    index.add(np.array(embeddings))
+    index.add(embeddings)
     return index, embeddings
 
 # Function: Retrieve top-k chunks
 def retrieve(query, chunks, index, k=3):
     query_emb = embedder.encode([query])
-    distances, indices = index.search(np.array(query_emb), k)
+    query_emb = np.array(query_emb).astype("float32")
+    distances, indices = index.search(query_emb, k)
     return [chunks[i] for i in indices[0]]
 
-# Function: Ask OpenAI with context
+# Function: Ask Groq with context
 def ask_llm(query, context):
     response = client.chat.completions.create(
         model="llama-3.1-70b-versatile",
@@ -48,8 +53,7 @@ def ask_llm(query, context):
         ],
         temperature=0.2
     )
-    return response.choices[0].message.content
-
+    return response.choices[0].message["content"]
 
 # Streamlit App
 st.set_page_config(page_title="PDF Q&A with Embeddings", layout="wide")
@@ -60,16 +64,19 @@ uploaded_file = st.file_uploader("Upload a PDF", type="pdf")
 if uploaded_file:
     with st.spinner("Reading and indexing PDF..."):
         text = read_pdf(uploaded_file)
-        chunks = chunk_text(text)
-        index, embeddings = build_faiss(chunks)
-        st.success("PDF processed and indexed ✅")
+        if not text.strip():
+            st.error("No text could be extracted from this PDF.")
+        else:
+            chunks = chunk_text(text)
+            index, embeddings = build_faiss(chunks)
+            st.success("PDF processed and indexed ✅")
 
-    query = st.text_input("Ask a question about the document:")
+            query = st.text_input("Ask a question about the document:")
 
-    if query:
-        with st.spinner("Retrieving answer..."):
-            top_chunks = retrieve(query, chunks, index)
-            context = " ".join(top_chunks)
-            answer = ask_llm(query, context)
-            st.write("### Answer:")
-            st.write(answer)
+            if query:
+                with st.spinner("Retrieving answer..."):
+                    top_chunks = retrieve(query, chunks, index)
+                    context = " ".join(top_chunks)
+                    answer = ask_llm(query, context)
+                    st.write("### Answer:")
+                    st.write(answer)
