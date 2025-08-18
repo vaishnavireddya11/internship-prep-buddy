@@ -1,82 +1,53 @@
 import streamlit as st
-import os
 from PyPDF2 import PdfReader
-from sentence_transformers import SentenceTransformer
-import faiss
-import numpy as np
 from groq import Groq
+import os
 
-# Load secrets
-client = Groq(api_key=os.getenv("GROQ_API_KEY"))
+# Load Groq API key
+GROQ_API_KEY = os.getenv("GROQ_API_KEY") or st.secrets["GROQ_API_KEY"]
 
-# Load embedding model
-embedder = SentenceTransformer("all-MiniLM-L6-v2")
+# Initialize Groq client
+client = Groq(api_key=GROQ_API_KEY)
 
-# Function: Read PDF
-def read_pdf(file):
-    pdf = PdfReader(file)
+# Function to extract text from PDF
+def extract_pdf_text(pdf_file):
+    pdf_reader = PdfReader(pdf_file)
     text = ""
-    for page in pdf.pages:
-        extracted = page.extract_text()
-        if extracted:
-            text += extracted
+    for page in pdf_reader.pages:
+        text += page.extract_text() or ""
     return text
 
-# Function: Chunk text
-def chunk_text(text, chunk_size=500):
-    words = text.split()
-    return [" ".join(words[i:i+chunk_size]) for i in range(0, len(words), chunk_size)]
-
-# Function: Build FAISS index
-def build_faiss(chunks):
-    embeddings = embedder.encode(chunks)
-    embeddings = np.array(embeddings).astype("float32")
-    dimension = embeddings.shape[1]
-    index = faiss.IndexFlatL2(dimension)
-    index.add(embeddings)
-    return index, embeddings
-
-# Function: Retrieve top-k chunks
-def retrieve(query, chunks, index, k=3):
-    query_emb = embedder.encode([query])
-    query_emb = np.array(query_emb).astype("float32")
-    distances, indices = index.search(query_emb, k)
-    return [chunks[i] for i in indices[0]]
-
-# Function: Ask Groq with context
+# Function to query LLM
 def ask_llm(query, context):
-    response = client.chat.completions.create(
-        model="llama-3.1-70b-versatile",
-        messages=[
-            {"role": "system", "content": "You are a helpful assistant for answering questions from a document."},
-            {"role": "user", "content": f"Context:\n{context}\n\nQuestion:\n{query}"}
-        ],
-        temperature=0.2
-    )
-    return response.choices[0].message["content"]
+    try:
+        response = client.chat.completions.create(
+            model="llama-3.1-70b-versatile",   # ✅ Correct Groq model
+            messages=[
+                {"role": "system", "content": "You are a helpful assistant that answers based on the given PDF context."},
+                {"role": "user", "content": f"Context:\n{context}\n\nQuestion:\n{query}"}
+            ],
+            temperature=0.2,
+            max_tokens=512
+        )
+        return response.choices[0].message["content"]
+    except Exception as e:
+        return f"❌ Error: {str(e)}"
 
-# Streamlit App
-st.set_page_config(page_title="PDF Q&A with Embeddings", layout="wide")
-st.title("📄 PDF Q&A with FAISS + Sentence Transformers")
+# ------------------ Streamlit UI ------------------
+st.set_page_config(page_title="PDF Q&A with Groq", layout="wide")
 
-uploaded_file = st.file_uploader("Upload a PDF", type="pdf")
+st.title("📄 PDF Q&A Chatbot (Groq-powered)")
+st.write("Upload a PDF, then ask questions about it!")
+
+uploaded_file = st.file_uploader("Upload PDF", type="pdf")
 
 if uploaded_file:
-    with st.spinner("Reading and indexing PDF..."):
-        text = read_pdf(uploaded_file)
-        if not text.strip():
-            st.error("No text could be extracted from this PDF.")
-        else:
-            chunks = chunk_text(text)
-            index, embeddings = build_faiss(chunks)
-            st.success("PDF processed and indexed ✅")
+    pdf_text = extract_pdf_text(uploaded_file)
 
-            query = st.text_input("Ask a question about the document:")
+    query = st.text_input("Ask a question about the PDF:")
 
-            if query:
-                with st.spinner("Retrieving answer..."):
-                    top_chunks = retrieve(query, chunks, index)
-                    context = " ".join(top_chunks)
-                    answer = ask_llm(query, context)
-                    st.write("### Answer:")
-                    st.write(answer)
+    if query:
+        with st.spinner("Thinking..."):
+            answer = ask_llm(query, pdf_text[:4000])  # limit context size
+            st.subheader("Answer:")
+            st.write(answer)
