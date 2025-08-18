@@ -7,7 +7,6 @@ import numpy as np
 from groq import Groq
 
 # Load secrets
-groq.api_key = st.secrets["GROQ_API_KEY"]
 client = Groq(api_key=os.getenv("GROQ_API_KEY"))
 # Load embedding model
 embedder = SentenceTransformer("all-MiniLM-L6-v2")
