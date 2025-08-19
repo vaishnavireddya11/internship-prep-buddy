@@ -5,5 +5,5 @@ faiss-cpu
 sentence-transformers
 langchain
 PyPDF2
-
+numpy
 
