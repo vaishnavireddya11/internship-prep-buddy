@@ -114,47 +114,86 @@ if uploaded_file:
             st.write(st.session_state.study_plan)
 
     # ------------------ Quiz ------------------
+        # ------------------ Quiz ------------------
     elif page == "Quiz":
-    st.title("📝 Quiz Generator")
-    num_qs = st.number_input("Number of questions", min_value=1, max_value=10, value=3, step=1)
+        st.title("📝 Quiz Generator")
+        num_qs = st.number_input("Number of questions", min_value=1, max_value=10, value=3, step=1)
 
-    if st.button("Create Quiz"):
-        quiz_prompt = f"""
-        Generate {num_qs} multiple-choice quiz questions based ONLY on the PDF content below.
-        Each question must have 4 options (A, B, C, D) and exactly one correct answer.
-        Return ONLY a valid JSON array like this:
-        [
-          {{"question": "Q1 text", "options": ["A", "B", "C", "D"], "answer": "A"}},
-          {{"question": "Q2 text", "options": ["A", "B", "C", "D"], "answer": "C"}}
-        ]
+        if st.button("Create Quiz"):
+            quiz_prompt = f"""
+            Generate {num_qs} multiple-choice quiz questions based ONLY on the PDF content below.
+            Each question must have:
+              - "question": string
+              - "options": list of 4 strings
+              - "answer": the correct option (must exactly match one of the options)
+              - "explanation": short reason why it's correct
 
-        Content: {text[:3000]}
-        """
+            Return ONLY a valid JSON array like this:
+            [
+              {{
+                "question": "What is 2+2?",
+                "options": ["3","4","5","6"],
+                "answer": "4",
+                "explanation": "Because 2+2=4"
+              }}
+            ]
 
-        quiz_text = ask_llm(quiz_prompt, temperature=0.5)
+            Content: {text[:3000]}
+            """
 
-        # Extract JSON safely
-        try:
-            start = quiz_text.find("[")
-            end = quiz_text.rfind("]") + 1
-            quiz_json = quiz_text[start:end]
-            quiz = json.loads(quiz_json)
-        except Exception as e:
-            st.error(f"⚠️ Failed to parse quiz: {e}")
-            quiz = []
+            quiz_text = ask_llm(quiz_prompt, temperature=0.5)
 
-        st.session_state.quiz = quiz
+            # Extract JSON safely
+            try:
+                start = quiz_text.find("[")
+                end = quiz_text.rfind("]") + 1
+                quiz_json = quiz_text[start:end]
+                quiz = json.loads(quiz_json)
+            except Exception as e:
+                st.error(f"⚠️ Failed to parse quiz: {e}")
+                quiz = []
 
-    # Display quiz if available
-    if st.session_state.quiz:
-        for i, q in enumerate(st.session_state.quiz):
-            st.subheader(f"Q{i+1}: {q['question']}")
-            choice = st.radio("Choose an option:", q["options"], key=f"q{i}")
-            if st.button(f"Check Answer {i+1}", key=f"ans{i}"):
-                if choice == q["answer"]:
-                    st.success("✅ Correct!")
+            st.session_state.quiz = quiz
+            st.session_state.user_answers = [None] * len(quiz)
+            st.session_state.quiz_submitted = False
+
+        # Show quiz if available
+        if st.session_state.quiz:
+            with st.form("quiz_form"):
+                for i, q in enumerate(st.session_state.quiz):
+                    st.subheader(f"Q{i+1}: {q['question']}")
+                    st.session_state.user_answers[i] = st.radio(
+                        "Choose an option:",
+                        q["options"],
+                        index=None,
+                        key=f"q{i}"
+                    )
+                    st.markdown("---")
+
+                submitted = st.form_submit_button("Submit All")
+
+            if submitted:
+                if None in st.session_state.user_answers:
+                    st.warning("⚠️ Please answer all questions before submitting.")
                 else:
-                    st.error(f"❌ Wrong! Correct Answer: {q['answer']}")
+                    st.session_state.quiz_submitted = True
+
+            if st.session_state.quiz_submitted:
+                score = 0
+                for i, q in enumerate(st.session_state.quiz):
+                    user_ans = st.session_state.user_answers[i]
+                    correct = q["answer"]
+
+                    if user_ans == correct:
+                        st.success(f"Q{i+1}: ✅ Correct — {correct}")
+                        score += 1
+                    else:
+                        st.error(f"Q{i+1}: ❌ Wrong — You chose: {user_ans}. Correct: {correct}")
+                    st.caption(f"Why: {q.get('explanation','No explanation provided')}")
+                    st.markdown("---")
+
+                st.info(f"Final Score: {score}/{len(st.session_state.quiz)}")
+
 
 
     # ------------------ History ------------------
