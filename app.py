@@ -115,40 +115,47 @@ if uploaded_file:
 
     # ------------------ Quiz ------------------
     elif page == "Quiz":
-        st.title("📝 Quiz Generator")
-        num_qs = st.number_input("Number of questions", min_value=1, max_value=10, value=3, step=1)
-        if st.button("Create Quiz"):
-            quiz_prompt = f"""
-            Generate {num_qs} multiple-choice quiz questions based ONLY on the PDF content below.
-            Each question must have 4 options (A, B, C, D) and exactly one correct answer.
-            Return valid JSON as:
-            [
-              {{"question": "...", "options": ["A) ...","B) ...","C) ...","D) ..."], "answer": "B"}}
-            ]
+    st.title("📝 Quiz Generator")
+    num_qs = st.number_input("Number of questions", min_value=1, max_value=10, value=3, step=1)
 
-            Content: {text[:3000]}
-            """
-            quiz_text = ask_llm(quiz_prompt, temperature=0.5)
+    if st.button("Create Quiz"):
+        quiz_prompt = f"""
+        Generate {num_qs} multiple-choice quiz questions based ONLY on the PDF content below.
+        Each question must have 4 options (A, B, C, D) and exactly one correct answer.
+        Return ONLY a valid JSON array like this:
+        [
+          {{"question": "Q1 text", "options": ["A", "B", "C", "D"], "answer": "A"}},
+          {{"question": "Q2 text", "options": ["A", "B", "C", "D"], "answer": "C"}}
+        ]
 
-            try:
-                quiz = json.loads(quiz_text)
-                if isinstance(quiz, list):
-                    st.session_state.quiz = quiz
+        Content: {text[:3000]}
+        """
+
+        quiz_text = ask_llm(quiz_prompt, temperature=0.5)
+
+        # Extract JSON safely
+        try:
+            start = quiz_text.find("[")
+            end = quiz_text.rfind("]") + 1
+            quiz_json = quiz_text[start:end]
+            quiz = json.loads(quiz_json)
+        except Exception as e:
+            st.error(f"⚠️ Failed to parse quiz: {e}")
+            quiz = []
+
+        st.session_state.quiz = quiz
+
+    # Display quiz if available
+    if st.session_state.quiz:
+        for i, q in enumerate(st.session_state.quiz):
+            st.subheader(f"Q{i+1}: {q['question']}")
+            choice = st.radio("Choose an option:", q["options"], key=f"q{i}")
+            if st.button(f"Check Answer {i+1}", key=f"ans{i}"):
+                if choice == q["answer"]:
+                    st.success("✅ Correct!")
                 else:
-                    st.session_state.quiz = []
-            except:
-                st.session_state.quiz = []
+                    st.error(f"❌ Wrong! Correct Answer: {q['answer']}")
 
-        # Display quiz with MCQs
-        if st.session_state.quiz:
-            for i, q in enumerate(st.session_state.quiz):
-                st.subheader(f"Q{i+1}: {q['question']}")
-                choice = st.radio("Choose an option:", q["options"], key=f"q{i}")
-                if st.button(f"Check Answer {i+1}", key=f"ans{i}"):
-                    if choice.strip().startswith(q["answer"]):
-                        st.success("✅ Correct!")
-                    else:
-                        st.error(f"❌ Wrong. Correct Answer: {q['answer']}")
 
     # ------------------ History ------------------
     elif page == "History":
